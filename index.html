@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paillier Encryption Voting System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .key-section {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .voting-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+
+        .candidate {
+            background: #f8f9fa;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .candidate:hover {
+            border-color: #3498db;
+            background: #e3f2fd;
+        }
+
+        .candidate.selected {
+            border-color: #27ae60;
+            background: #d4edda;
+        }
+
+        .candidate input[type="checkbox"] {
+            transform: scale(1.2);
+            margin-bottom: 5px;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .danger {
+            background: #e74c3c;
+        }
+
+        .danger:hover {
+            background: #c0392b;
+        }
+
+        .success {
+            background: #27ae60;
+        }
+
+        .success:hover {
+            background: #229954;
+        }
+
+        .log {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .key-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            border: 1px solid #dee2e6;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            word-break: break-all;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .results-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .encrypted-votes {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .encrypted-vote {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Selection controls */
+        .selection-controls {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+
+        .selection-controls button {
+            margin: 5px;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🗳️ Paillier Encryption Voting System with ZKP</h1>
+
+    <div class="container">
+        <h2>1. Key Generation</h2>
+        <div class="key-section">
+            <button id="generateKeys" onclick="generateKeys()">Generate New Key Pair</button>
+            <button id="clearKeys" onclick="clearKeys()" class="danger">Clear Keys</button>
+
+            <div id="keyStatus" style="margin-top: 15px;"></div>
+
+            <div id="publicKeyDisplay" style="margin-top: 10px;">
+                <strong>Public Key (n, g):</strong>
+                <div class="key-display" id="publicKeyText">No keys generated</div>
+            </div>
+
+            <div id="privateKeyDisplay" style="margin-top: 10px;">
+                <strong>Private Key (λ, μ):</strong>
+                <div class="key-display" id="privateKeyText">No keys generated</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>2. Voting Interface</h2>
+        <p><strong>Instructions:</strong> Select one or more candidates for testing. The system will encrypt each vote
+            separately and generate ZKPs. <em>(Scroll to see all 100 candidates)</em></p>
+
+        <div class="voting-section" id="votingSection">
+            <!-- Candidates will be generated dynamically by JavaScript -->
+        </div>
+
+        <div class="selection-controls">
+            <button onclick="selectRandomCandidates(1)" style="background: #17a2b8;">Select 1 Random</button>
+            <button onclick="selectRandomCandidates(5)" style="background: #28a745;">Select 5 Random</button>
+            <button onclick="selectRandomCandidates(10)" style="background: #ffc107; color: black;">Select 10
+                Random</button>
+            <button onclick="selectAllCandidates()" style="background: #dc3545;">Select All (for testing)</button>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button id="encryptVotes" onclick="encryptVotes()" disabled>Encrypt Votes & Generate ZKPs</button>
+            <button id="clearVotes" onclick="clearVotes()" class="danger">Clear All Votes</button>
+        </div>
+
+        <div id="votingStatus"></div>
+    </div>
+
+    <div class="container">
+        <h2>3. Encrypted Votes & Zero-Knowledge Proofs</h2>
+        <p><em>Note: Processing many votes simultaneously may take time due to cryptographic operations.</em></p>
+        <div class="results-section">
+            <div>
+                <h3>Encrypted Votes</h3>
+                <div id="encryptedVotesDisplay" class="encrypted-votes">
+                    No votes encrypted yet
+                </div>
+            </div>
+            <div>
+                <h3>ZKP Verification Results</h3>
+                <div id="zkpResults" class="encrypted-votes">
+                    No proofs generated yet
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button id="verifyZKPs" onclick="verifyAllZKPs()" disabled class="success">Verify All ZKPs</button>
+            <button onclick="debugZKP()" disabled id="debugZKP" style="background: #9b59b6;">🐛 Debug ZKP</button>
+            <button id="sendVote" onclick="sendVoteToBackend()" disabled style="background: #e67e22;">📤 Send Vote to
+                Backend</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>4. Homomorphic Tallying</h2>
+        <p><strong>Note:</strong> This uses the private key and should only be done by trusted authorities after voting
+            closes.</p>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button id="computeTally" onclick="computeHomomorphicTally()" disabled class="danger">🔓 Decrypt & Tally
+                Results (Uses Private Key)</button>
+        </div>
+
+        <div id="tallyResults"></div>
+    </div>
+
+    <div class="container">
+        <h2>5. System Log</h2>
+        <div id="systemLog" class="log">System initialized. Generate keys to begin.</div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <!-- Include all our crypto libraries -->
+    <script src="bigint-utils.js"></script>
+    <script src="paillier.js"></script>
+    <script src="zkp.js"></script>
+    <script src="voting-system.js"></script>
+</body>
+
+</html>

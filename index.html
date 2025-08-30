@@ -6,17 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paillier Encryption Voting System</title>
     <style>
+        /* Mobile-first responsive design */
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 10px;
             background-color: #f5f5f5;
+            line-height: 1.6;
         }
 
+        /* Mobile-optimized containers */
         .container {
             background: white;
-            padding: 30px;
+            padding: 20px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
@@ -25,92 +32,119 @@
         h1 {
             color: #2c3e50;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
         }
 
         h2 {
             color: #34495e;
             border-bottom: 2px solid #3498db;
             padding-bottom: 10px;
+            font-size: 1.2rem;
+            margin-top: 0;
         }
 
+        h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        /* Mobile-optimized key section */
         .key-section {
             background: #ecf0f1;
-            padding: 20px;
+            padding: 15px;
             border-radius: 5px;
-            margin: 20px 0;
+            margin: 15px 0;
         }
 
+        /* Responsive voting grid */
         .voting-section {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            margin: 20px 0;
-            max-height: 400px;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+            margin: 15px 0;
+            max-height: 300px;
             overflow-y: auto;
-            padding: 15px;
+            padding: 10px;
             border: 2px solid #dee2e6;
             border-radius: 5px;
             background: #f8f9fa;
         }
 
+        /* Touch-friendly candidates */
         .candidate {
             background: #f8f9fa;
-            padding: 10px;
+            padding: 12px 8px;
             border: 2px solid #dee2e6;
             border-radius: 5px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 12px;
+            font-size: 11px;
             min-height: 50px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            touch-action: manipulation;
+            user-select: none;
         }
 
-        .candidate:hover {
+        .candidate:hover,
+        .candidate:focus {
             border-color: #3498db;
             background: #e3f2fd;
+            transform: translateY(-1px);
         }
 
         .candidate.selected {
             border-color: #27ae60;
             background: #d4edda;
+            box-shadow: 0 2px 4px rgba(39, 174, 96, 0.3);
         }
 
         .candidate input[type="checkbox"] {
-            transform: scale(1.2);
-            margin-bottom: 5px;
+            transform: scale(1.1);
+            margin-bottom: 4px;
+            pointer-events: none;
         }
 
+        /* Mobile-optimized buttons */
         button {
             background: #3498db;
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 12px 16px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
-            transition: background 0.3s ease;
+            font-size: 14px;
+            margin: 4px;
+            transition: all 0.3s ease;
+            min-height: 44px;
+            /* Touch target minimum */
+            touch-action: manipulation;
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
         }
 
         button:disabled {
             background: #95a5a6;
             cursor: not-allowed;
+            transform: none;
         }
 
         .danger {
             background: #e74c3c;
         }
 
-        .danger:hover {
+        .danger:hover:not(:disabled) {
             background: #c0392b;
         }
 
@@ -118,39 +152,44 @@
             background: #27ae60;
         }
 
-        .success:hover {
+        .success:hover:not(:disabled) {
             background: #229954;
         }
 
+        /* Responsive log */
         .log {
             background: #2c3e50;
             color: #ecf0f1;
             padding: 15px;
             border-radius: 5px;
             font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 300px;
+            font-size: 11px;
+            max-height: 200px;
             overflow-y: auto;
             white-space: pre-wrap;
+            word-break: break-word;
         }
 
+        /* Mobile-optimized key display */
         .key-display {
             background: #f8f9fa;
             padding: 10px;
             border-radius: 3px;
             border: 1px solid #dee2e6;
             font-family: 'Courier New', monospace;
-            font-size: 11px;
+            font-size: 10px;
             word-break: break-all;
-            max-height: 100px;
+            max-height: 80px;
             overflow-y: auto;
         }
 
+        /* Status messages */
         .status {
             padding: 10px;
             border-radius: 5px;
             margin: 10px 0;
             font-weight: bold;
+            font-size: 14px;
         }
 
         .status.success {
@@ -171,10 +210,11 @@
             border: 1px solid #bee5eb;
         }
 
+        /* Mobile-friendly results section */
         .results-section {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            grid-template-columns: 1fr;
+            gap: 15px;
         }
 
         .encrypted-votes {
@@ -187,28 +227,294 @@
         .encrypted-vote {
             background: white;
             padding: 10px;
-            margin: 5px 0;
+            margin: 8px 0;
             border-radius: 3px;
             font-family: 'Courier New', monospace;
-            font-size: 11px;
+            font-size: 10px;
             word-break: break-all;
-            max-height: 200px;
+            max-height: 150px;
             overflow-y: auto;
         }
 
-        /* Selection controls */
-        .selection-controls {
-            text-align: center;
-            margin: 15px 0;
-            padding: 10px;
-            background: #e9ecef;
-            border-radius: 5px;
+        /* Highlight candidates with votes in results */
+        .encrypted-vote.selected {
+            background: #d4edda;
+            border-left: 4px solid #27ae60;
+            font-weight: bold;
         }
 
-        .selection-controls button {
-            margin: 5px;
+        /* Button container for mobile */
+        .button-container {
+            text-align: center;
+            margin: 15px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .button-container button {
+            flex: 1 1 auto;
+            min-width: 120px;
+            max-width: 200px;
+        }
+
+        /* Tablet styles */
+        @media (min-width: 768px) {
+            body {
+                padding: 20px;
+            }
+
+            .container {
+                padding: 30px;
+            }
+
+            h1 {
+                font-size: 2rem;
+                margin-bottom: 30px;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .voting-section {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 10px;
+                max-height: 350px;
+                padding: 15px;
+            }
+
+            .candidate {
+                font-size: 12px;
+                padding: 15px 10px;
+                min-height: 60px;
+            }
+
+            .results-section {
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+
+            button {
+                font-size: 16px;
+                padding: 12px 24px;
+            }
+
+            .log {
+                max-height: 250px;
+                font-size: 12px;
+            }
+
+            .key-display {
+                font-size: 11px;
+                max-height: 100px;
+            }
+        }
+
+        /* Desktop styles */
+        @media (min-width: 1024px) {
+            .voting-section {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                max-height: 400px;
+            }
+
+            .candidate {
+                font-size: 12px;
+                padding: 15px;
+                min-height: 65px;
+            }
+
+            .log {
+                max-height: 300px;
+            }
+
+            .encrypted-vote {
+                font-size: 11px;
+                max-height: 200px;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* High contrast mode */
+        @media (prefers-contrast: high) {
+            .candidate {
+                border-width: 3px;
+            }
+
+            .candidate:hover,
+            .candidate.selected {
+                border-width: 4px;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+
+            .button-container,
+            button {
+                display: none;
+            }
+
+            .container {
+                box-shadow: none;
+                border: 1px solid #ccc;
+            }
+        }
+
+        /* Modal styles for network payload display */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.4rem;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #e74c3c;
+        }
+
+        .payload-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .payload-display {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .copy-payload {
+            background: #9b59b6;
+            color: white;
+            border: none;
             padding: 8px 16px;
-            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s ease;
+        }
+
+        .copy-payload:hover {
+            background: #8e44ad;
+        }
+
+        .payload-stats {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Mobile modal adjustments */
+        @media (max-width: 768px) {
+            .modal-content {
+                margin: 2% auto;
+                width: 95%;
+                padding: 15px;
+                max-height: 90vh;
+            }
+
+            .modal-header h2 {
+                font-size: 1.2rem;
+            }
+
+            .payload-display {
+                font-size: 10px;
+                padding: 15px;
+                max-height: 300px;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .modal-actions button {
+                width: 100%;
+                margin: 5px 0;
+            }
         }
     </style>
 </head>
@@ -239,21 +545,13 @@
     <div class="container">
         <h2>2. Voting Interface</h2>
         <p><strong>Instructions:</strong> Select one or more candidates for testing. The system will encrypt each vote
-            separately and generate ZKPs. <em>(Scroll to see all 100 candidates)</em></p>
+            separately and generate ZKPs. <em>(Scroll to see all candidates)</em></p>
 
         <div class="voting-section" id="votingSection">
             <!-- Candidates will be generated dynamically by JavaScript -->
         </div>
 
-        <div class="selection-controls">
-            <button onclick="selectRandomCandidates(1)" style="background: #17a2b8;">Select 1 Random</button>
-            <button onclick="selectRandomCandidates(5)" style="background: #28a745;">Select 5 Random</button>
-            <button onclick="selectRandomCandidates(10)" style="background: #ffc107; color: black;">Select 10
-                Random</button>
-            <button onclick="selectAllCandidates()" style="background: #dc3545;">Select All (for testing)</button>
-        </div>
-
-        <div style="text-align: center; margin: 20px 0;">
+        <div class="button-container">
             <button id="encryptVotes" onclick="encryptVotes()" disabled>Encrypt Votes & Generate ZKPs</button>
             <button id="clearVotes" onclick="clearVotes()" class="danger">Clear All Votes</button>
         </div>
@@ -279,11 +577,11 @@
             </div>
         </div>
 
-        <div style="text-align: center; margin: 20px 0;">
+        <div class="button-container">
             <button id="verifyZKPs" onclick="verifyAllZKPs()" disabled class="success">Verify All ZKPs</button>
             <button onclick="debugZKP()" disabled id="debugZKP" style="background: #9b59b6;">🐛 Debug ZKP</button>
-            <button id="sendVote" onclick="sendVoteToBackend()" disabled style="background: #e67e22;">📤 Send Vote to
-                Backend</button>
+            <button id="sendVote" onclick="sendVoteToBackend()" disabled style="background: #e67e22;">📤 Send
+                Vote</button>
         </div>
     </div>
 
@@ -292,9 +590,9 @@
         <p><strong>Note:</strong> This uses the private key and should only be done by trusted authorities after voting
             closes.</p>
 
-        <div style="text-align: center; margin: 20px 0;">
+        <div class="button-container">
             <button id="computeTally" onclick="computeHomomorphicTally()" disabled class="danger">🔓 Decrypt & Tally
-                Results (Uses Private Key)</button>
+                Results</button>
         </div>
 
         <div id="tallyResults"></div>
@@ -304,6 +602,41 @@
         <h2>5. System Log</h2>
         <div id="systemLog" class="log">System initialized. Generate keys to begin.</div>
         <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <!-- Network Payload Modal -->
+    <div id="payloadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🌐 Network Payload Inspection</h2>
+                <span class="close" onclick="closePayloadModal()">&times;</span>
+            </div>
+            
+            <div class="payload-info">
+                <strong>📡 What you're about to send:</strong><br>
+                This is the actual encrypted vote data and zero-knowledge proofs that will be transmitted over the network. 
+                You can inspect the payload below to see exactly what data is being sent to the backend server.
+                <br><br>
+                <div class="payload-stats" id="payloadStats">
+                    <!-- Stats will be filled by JavaScript -->
+                </div>
+            </div>
+
+            <div class="payload-display" id="payloadContent">
+                <!-- Payload will be displayed here -->
+            </div>
+
+            <div class="modal-actions">
+                <div>
+                    <button class="copy-payload" onclick="copyPayloadToClipboard()">📋 Copy Payload</button>
+                    <button class="copy-payload" onclick="downloadPayload()">💾 Download JSON</button>
+                </div>
+                <div>
+                    <button onclick="closePayloadModal()" style="background: #95a5a6;">❌ Cancel</button>
+                    <button id="confirmSendBtn" onclick="confirmSendPayload()" class="success">📤 Send to Network</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Include all our crypto libraries -->

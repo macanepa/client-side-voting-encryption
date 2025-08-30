@@ -173,62 +173,6 @@ function toggleVote(candidateIndex) {
 }
 
 /**
- * Select a random number of candidates for testing
- */
-function selectRandomCandidates(count) {
-    if (!isKeysGenerated) {
-        updateStatus('Please generate keys first before voting.', 'error');
-        return;
-    }
-
-    // Clear current selections
-    clearVotes();
-
-    // Select random candidates
-    const selectedIndices = new Set();
-    while (selectedIndices.size < Math.min(count, CANDIDATE_COUNT)) {
-        const randomIndex = Math.floor(Math.random() * CANDIDATE_COUNT);
-        selectedIndices.add(randomIndex);
-    }
-
-    // Apply selections
-    for (const index of selectedIndices) {
-        toggleVote(index);
-    }
-
-    log(`🎲 Randomly selected ${selectedIndices.size} candidates`);
-}
-
-/**
- * Select all candidates for testing (stress test)
- */
-function selectAllCandidates() {
-    if (!isKeysGenerated) {
-        updateStatus('Please generate keys first before voting.', 'error');
-        return;
-    }
-
-    if (!confirm(`This will select all ${CANDIDATE_COUNT} candidates. This is for testing purposes only and will take significant time to process. Continue?`)) {
-        return;
-    }
-
-    // Clear current selections
-    clearVotes();
-
-    // Select all candidates
-    for (let i = 0; i < CANDIDATE_COUNT; i++) {
-        currentVotes[i] = true;
-        const checkbox = document.getElementById(`vote${i}`);
-        const candidate = document.getElementById(`candidate${i}`);
-        if (checkbox) checkbox.checked = true;
-        if (candidate) candidate.classList.add('selected');
-    }
-
-    log(`⚠️ Selected ALL ${CANDIDATE_COUNT} candidates for stress testing`);
-    updateUIState();
-}
-
-/**
  * Clear all vote selections
  */
 function clearVotes() {
@@ -545,24 +489,17 @@ function displayTallyResults(results, totalVotes) {
         <div class="results-section">
     `;
 
-    // Individual results - only show candidates with votes
-    html += '<div><h3>Individual Votes (Non-Zero Results)</h3>';
-    let hasResults = false;
+    // Individual results - show all candidates
+    html += '<div><h3>All Candidates Results</h3>';
     for (let i = 0; i < results.length; i++) {
         const votes = results[i];
-        if (votes > 0) {
-            hasResults = true;
-            const percentage = totalVotes > 0 ? (votes / totalVotes * 100).toFixed(1) : 0;
-            html += `
-                <div class="encrypted-vote">
-                    <strong>Candidate ${i + 1}:</strong> ${votes} vote${votes !== 1 ? 's' : ''} (${percentage}%)
-                </div>
-            `;
-        }
-    }
-
-    if (!hasResults) {
-        html += `<div class="encrypted-vote">No votes recorded</div>`;
+        const percentage = totalVotes > 0 ? (votes / totalVotes * 100).toFixed(1) : 0;
+        const voteClass = votes > 0 ? 'selected' : '';
+        html += `
+            <div class="encrypted-vote ${voteClass}">
+                <strong>Candidate ${i + 1}:</strong> ${votes} vote${votes !== 1 ? 's' : ''} (${percentage}%)
+            </div>
+        `;
     }
     html += '</div>';
 
@@ -743,74 +680,222 @@ async function sendVoteToBackend() {
     }
 
     try {
-        log('📤 Preparing vote payload for backend...');
-        updateStatus('Sending encrypted vote to backend...', 'info');
+        log('📤 Preparing vote payload for inspection...');
+        updateStatus('Preparing vote payload...', 'info');
 
         // Prepare the complete vote payload
-        const votePayload = {
-            // Metadata
-            timestamp: new Date().toISOString(),
-            voterId: 'demo-voter-' + Date.now(), // In real system, this would be authenticated
-            sessionId: 'session-' + Math.random().toString(36).substr(2, 9),
+        const votePayload = prepareVotePayload();
 
-            // Public key (so backend can verify without storing keys)
-            publicKey: {
-                n: paillierSystem.publicKey.n.toString(),
-                g: paillierSystem.publicKey.g.toString(),
-                nSquared: paillierSystem.publicKey.nSquared.toString()
-            },
+        // Show payload inspection modal
+        showPayloadModal(votePayload);
 
-            // Encrypted votes for each candidate
-            encryptedVotes: encryptedVotes.map((vote, index) => ({
+    } catch (error) {
+        log('❌ Payload preparation failed: ' + error.message);
+        updateStatus('Failed to prepare vote payload: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Prepare the vote payload for network transmission
+ */
+function prepareVotePayload() {
+    return {
+        // Metadata
+        timestamp: new Date().toISOString(),
+        voterId: 'demo-voter-' + Date.now(), // In real system, this would be authenticated
+        sessionId: 'session-' + Math.random().toString(36).substr(2, 9),
+
+        // Public key (so backend can verify without storing keys)
+        publicKey: {
+            n: paillierSystem.publicKey.n.toString(),
+            g: paillierSystem.publicKey.g.toString(),
+            nSquared: paillierSystem.publicKey.nSquared.toString()
+        },
+
+        // Encrypted votes for each candidate
+        encryptedVotes: encryptedVotes.map((vote, index) => ({
+            candidateId: index,
+            candidateName: `Candidate ${index + 1}`,
+            ciphertext: vote.toString()
+        })),
+
+        // Zero-Knowledge Proofs
+        zkpProofs: {
+            // Individual bit proofs (each vote is 0 or 1)
+            bitProofs: voteProofs[0].bitProofs.map((proof, index) => ({
                 candidateId: index,
-                candidateName: `Candidate ${index + 1}`,
-                ciphertext: vote.toString()
+                proof0: {
+                    a: proof.proof0.a.toString(),
+                    e: proof.proof0.e.toString(),
+                    z: proof.proof0.z.toString(),
+                    rResponse: proof.proof0.rResponse.toString()
+                },
+                proof1: {
+                    a: proof.proof1.a.toString(),
+                    e: proof.proof1.e.toString(),
+                    z: proof.proof1.z.toString(),
+                    rResponse: proof.proof1.rResponse.toString()
+                },
+                ciphertext: proof.ciphertext.toString()
             })),
 
-            // Zero-Knowledge Proofs
-            zkpProofs: {
-                // Individual bit proofs (each vote is 0 or 1)
-                bitProofs: voteProofs[0].bitProofs.map((proof, index) => ({
-                    candidateId: index,
-                    proof0: {
-                        a: proof.proof0.a.toString(),
-                        e: proof.proof0.e.toString(),
-                        z: proof.proof0.z.toString(),
-                        rResponse: proof.proof0.rResponse.toString()
-                    },
-                    proof1: {
-                        a: proof.proof1.a.toString(),
-                        e: proof.proof1.e.toString(),
-                        z: proof.proof1.z.toString(),
-                        rResponse: proof.proof1.rResponse.toString()
-                    },
-                    ciphertext: proof.ciphertext.toString()
-                })),
-
-                // Sum constraint proof (votes sum to exactly 1)
-                sumProof: {
-                    encryptedSum: voteProofs[0].sumProof.encryptedSum.toString(),
-                    expectedSum: voteProofs[0].sumProof.expectedSum.toString(),
-                    a: voteProofs[0].sumProof.a.toString(),
-                    e: voteProofs[0].sumProof.e.toString(),
-                    z: voteProofs[0].sumProof.z.toString(),
-                    rResponse: voteProofs[0].sumProof.rResponse.toString()
-                }
-            },
-
-            // Vote selections for verification (in real system, this would be omitted)
-            debugInfo: {
-                selectedCandidates: currentVotes.map((vote, index) => vote ? index : null).filter(x => x !== null),
-                voteVector: currentVotes.map(vote => vote ? 1 : 0)
+            // Sum constraint proof (votes sum to exactly 1)
+            sumProof: {
+                encryptedSum: voteProofs[0].sumProof.encryptedSum.toString(),
+                expectedSum: voteProofs[0].sumProof.expectedSum.toString(),
+                a: voteProofs[0].sumProof.a.toString(),
+                e: voteProofs[0].sumProof.e.toString(),
+                z: voteProofs[0].sumProof.z.toString(),
+                rResponse: voteProofs[0].sumProof.rResponse.toString()
             }
-        };
+        },
 
-        // Convert to JSON
-        const payload = JSON.stringify(votePayload, null, 2);
+        // Vote selections for verification (in real system, this would be omitted)
+        debugInfo: {
+            selectedCandidates: currentVotes.map((vote, index) => vote ? index : null).filter(x => x !== null),
+            voteVector: currentVotes.map(vote => vote ? 1 : 0)
+        }
+    };
+}
 
-        log(`📦 Payload size: ${(payload.length / 1024).toFixed(2)} KB`);
-        log('📝 Payload preview:');
-        log(payload.substring(0, 500) + '...');
+/**
+ * Show the payload inspection modal
+ */
+function showPayloadModal(payload) {
+    const modal = document.getElementById('payloadModal');
+    const payloadContent = document.getElementById('payloadContent');
+    const payloadStats = document.getElementById('payloadStats');
+
+    // Convert to formatted JSON
+    const payloadJson = JSON.stringify(payload, null, 2);
+    
+    // Calculate stats
+    const sizeKB = (payloadJson.length / 1024).toFixed(2);
+    const selectedCount = currentVotes.filter(v => v).length;
+    const totalProofs = payload.zkpProofs.bitProofs.length;
+    
+    // Display stats
+    payloadStats.innerHTML = `
+        <strong>📊 Payload Statistics:</strong><br>
+        • Size: ${sizeKB} KB<br>
+        • Selected Candidates: ${selectedCount}/${CANDIDATE_COUNT}<br>
+        • ZK Proofs: ${totalProofs} bit proofs + 1 sum proof<br>
+        • Endpoint: <code>POST http://localhost:3000/api/vote</code>
+    `;
+
+    // Display formatted payload
+    payloadContent.textContent = payloadJson;
+
+    // Store payload for later use
+    window.currentPayload = payloadJson;
+
+    // Show modal
+    modal.style.display = 'block';
+
+    log(`📦 Payload prepared for inspection (${sizeKB} KB)`);
+}
+
+/**
+ * Close the payload modal
+ */
+function closePayloadModal() {
+    const modal = document.getElementById('payloadModal');
+    modal.style.display = 'none';
+    window.currentPayload = null;
+}
+
+/**
+ * Copy payload to clipboard
+ */
+async function copyPayloadToClipboard() {
+    if (!window.currentPayload) return;
+
+    try {
+        await navigator.clipboard.writeText(window.currentPayload);
+        log('📋 Payload copied to clipboard');
+        
+        // Visual feedback
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        btn.style.background = '#27ae60';
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '#9b59b6';
+        }, 2000);
+        
+    } catch (error) {
+        log('❌ Failed to copy payload: ' + error.message);
+        
+        // Fallback - select the text
+        const payloadContent = document.getElementById('payloadContent');
+        const range = document.createRange();
+        range.selectNode(payloadContent);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        
+        log('� Payload text selected - use Ctrl+C to copy');
+    }
+}
+
+/**
+ * Download payload as JSON file
+ */
+function downloadPayload() {
+    if (!window.currentPayload) return;
+
+    try {
+        const blob = new Blob([window.currentPayload], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        a.href = url;
+        a.download = `vote-payload-${timestamp}.json`;
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+        
+        log('💾 Payload downloaded as JSON file');
+        
+        // Visual feedback
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Downloaded!';
+        btn.style.background = '#27ae60';
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '#9b59b6';
+        }, 2000);
+        
+    } catch (error) {
+        log('❌ Failed to download payload: ' + error.message);
+    }
+}
+
+/**
+ * Confirm and send the payload to the network
+ */
+async function confirmSendPayload() {
+    if (!window.currentPayload) {
+        log('❌ No payload available to send');
+        return;
+    }
+
+    try {
+        log('📤 Sending vote payload to backend...');
+        updateStatus('Sending encrypted vote to backend...', 'info');
+
+        // Parse the payload back to object for sending
+        const votePayload = JSON.parse(window.currentPayload);
+
+        log(`📦 Transmitting ${(window.currentPayload.length / 1024).toFixed(2)} KB to network...`);
+        log('🌐 Opening network connection to http://localhost:3000/api/vote');
 
         // Send to localhost backend
         const response = await fetch('http://localhost:3000/api/vote', {
@@ -820,7 +905,7 @@ async function sendVoteToBackend() {
                 'X-Client-Version': '1.0.0',
                 'X-Vote-Type': 'paillier-zkp'
             },
-            body: payload
+            body: window.currentPayload
         });
 
         if (response.ok) {
@@ -828,6 +913,9 @@ async function sendVoteToBackend() {
             log('✅ Vote sent successfully!');
             log(`📨 Server response: ${JSON.stringify(result, null, 2)}`);
             updateStatus('Vote sent successfully to backend!', 'success');
+            
+            // Close modal on success
+            closePayloadModal();
         } else {
             const errorText = await response.text();
             log(`❌ Server error (${response.status}): ${errorText}`);
@@ -839,6 +927,7 @@ async function sendVoteToBackend() {
             log('❌ Connection failed - backend server not running');
             updateStatus('Cannot connect to backend server at localhost:3000', 'error');
             log('💡 Start a backend server or check the endpoint URL');
+            log('💡 You can still copy/download the payload to inspect it');
         } else {
             log('❌ Send failed: ' + error.message);
             updateStatus('Failed to send vote: ' + error.message, 'error');
@@ -855,4 +944,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Run self-tests
     runSelfTests();
+
+    // Add modal event listeners
+    setupModalEventListeners();
 });
+
+/**
+ * Setup modal event listeners
+ */
+function setupModalEventListeners() {
+    const modal = document.getElementById('payloadModal');
+    
+    // Close modal when clicking outside of it
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closePayloadModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && modal.style.display === 'block') {
+            closePayloadModal();
+        }
+    });
+}
